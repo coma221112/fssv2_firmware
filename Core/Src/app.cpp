@@ -40,7 +40,6 @@ inline float Clamp(float raw_val){
 	return fmaxf(-1.0f, fminf(1.0f, raw_val));
 }
 
-volatile bool sendBit = false;
 uint8_t HID_SendReport_Safe(USBD_HandleTypeDef *pdev,
                                         uint8_t *report,
                                         uint16_t len,
@@ -62,8 +61,6 @@ uint8_t HID_SendReport_Safe(USBD_HandleTypeDef *pdev,
         if (hhid->state == CUSTOM_HID_BUSY) {
             return USBD_BUSY;
         }
-        sendBit = !sendBit;
-        PC13 = sendBit;
         return USBD_CUSTOM_HID_SendReport(pdev, report, len);
     }
 }
@@ -79,7 +76,7 @@ int32_t lastF = 0;
 extern "C" void RealMain(){
 	while(!(sg0.configGood&&sg1.configGood&&sg2.configGood));
 	HAL_Delay(10);
-	PC13=0;
+
 
 	ZeroTracker zt0(sg0.ADCdata),zt1(sg1.ADCdata),zt2(sg2.ADCdata);
 
@@ -99,10 +96,14 @@ extern "C" void RealMain(){
 			lastF = DWT_GetUs();
 			swvRaw = swv0.update(abs(dv0-dv1) + abs(dv1-dv2) + abs(dv2-dv0));
 			swv = swvRaw;//swvEma.update(swvRaw);
-			if(swvRaw < 500000){
+			if(swvRaw < 400000){
 				dc0=zt0.update(v0);
 				dc1=zt1.update(v1);
 				dc2=zt2.update(v2);
+				PC13 = 0;
+			}
+			else{
+				PC13 = 1;
 			}
 		}
 		dv0=v0-dc0;
