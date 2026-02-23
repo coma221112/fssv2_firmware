@@ -94,7 +94,7 @@ extern "C" void RealMain(){
 		v2=sg2.filtered;
 		if(DWT_GetUs() - lastF > 10000){
 			lastF = DWT_GetUs();
-			swvRaw = swv0.update(abs(dv0-dv1) + abs(dv1-dv2) + abs(dv2-dv0));
+			swvRaw = swv0.update(abs(v0-v1) + abs(v1-v2) + abs(v2-v0));
 			swv = swvRaw;//swvEma.update(swvRaw);
 			if(swvRaw < 400000){
 				dc0=zt0.update(v0);
