@@ -12,6 +12,7 @@
 #include "JoystickProtocol.hpp"
 #include "Filters.hpp"
 #include "Util.hpp"
+#include "Persistence.hpp"
 
 #include "cmath"
 
@@ -69,34 +70,60 @@ int32_t v0,v1,v2;
 int32_t dc0,dc1,dc2;
 int32_t dv0,dv1,dv2;
 SWV<256> swv0;//,swv1,swv2;
+ZeroTracker zt0,zt1,zt2;
 EMA swvEma(10240);
 float swvRaw;
 float swv;
 int32_t lastF = 0;
+typedef struct{
+	int8_t f0;
+	int32_t f2;
+	int16_t f1;
+}__attribute__((packed)) aligntest_t;
+aligntest_t at;
+volatile uint32_t tear_count = 0;
 extern "C" void RealMain(){
 	while(!(sg0.configGood&&sg1.configGood&&sg2.configGood));
-	HAL_Delay(10);
+	zt0.calibrate(sg0.ADCdata);
+	zt1.calibrate(sg1.ADCdata);
+	zt2.calibrate(sg2.ADCdata);
+
+	HAL_FLASH_Unlock();
+	EE_Init();
+	HAL_FLASH_Lock();
+
+	Persistence::Read(0, joystickConfig);
 
 
-	ZeroTracker zt0(sg0.ADCdata),zt1(sg1.ADCdata),zt2(sg2.ADCdata);
 
     uint32_t lastL = DWT_GetUs();
     int8_t loopCount = 0;
 	while(true){
+//		if(loopCount%2==0){
+//			at.f1=0;
+//		}
+//		else{
+//			at.f1=-1;
+//		}
+//		if(at.f1==255||at.f1==-256){
+//			tear_count++;
+//		}
 		loopCount++;
 		uint32_t loopTime = DWT_GetUs()-lastL;
 		lastL = DWT_GetUs();
 
-		float maxRange = joystickConfig.maxRange;
-
 		v0=sg0.filtered;
 		v1=sg1.filtered;
 		v2=sg2.filtered;
+		dv0=v0-dc0;
+		dv1=v1-dc1;
+		dv2=v2-dc2;
+
 		if(DWT_GetUs() - lastF > 10000){
 			lastF = DWT_GetUs();
 			swvRaw = swv0.update(abs(v0-v1) + abs(v1-v2) + abs(v2-v0));
 			swv = swvRaw;//swvEma.update(swvRaw);
-			if(swvRaw < 400000){
+			if(swv < 400000){
 				dc0=zt0.update(v0);
 				dc1=zt1.update(v1);
 				dc2=zt2.update(v2);
@@ -106,49 +133,37 @@ extern "C" void RealMain(){
 				PC13 = 1;
 			}
 		}
-		dv0=v0-dc0;
-		dv1=v1-dc1;
-		dv2=v2-dc2;
+
+		float maxRange = joystickConfig.maxRange;
+		constexpr float axisRange = 32767;
+		float scale = axisRange / maxRange;
+
 		float fx,fy,fz;
-		// X component: fx = v2*cos(330°) + v1*cos(210°) + v0*cos(90°)
-		//              fx = v2*0.866 + v1*(-0.866) + v0*0
-		//              fx ≈ 0.866*(v2 - v1)
 		fx = Clamp((dv2 - dv1) / maxRange * 0.866f);
-		// Y component: fy = v0*sin(90°) + v1*sin(210°) + v2*sin(330°)
-		//              fy = v0*1 + v1*(-0.5) + v2*(-0.5)
-		//              fy = v0 - 0.5*(v1 + v2)
 		fy = Clamp((0.5f*(dv1 + dv2) - dv0) / maxRange);
-		// Z component: average compression (all sensors pushed down)
 		fz = Clamp(((dv0 + dv1 + dv2) / maxRange / 3.f));
 
-		// 1. 计算合力的大小（模长）
 		float magnitude = sqrtf(fx * fx + fy * fy);
-
-		// 2. 检查是否在死区内
 		if (magnitude < joystickConfig.deadzone) {
 		    fx = 0;
 		    fy = 0;
 		} else {
-		    // 3. 线性重映射（可选）：让输出从死区边缘平滑起始
 		    float factor = (magnitude - joystickConfig.deadzone) / (1 - joystickConfig.deadzone);
-		    // 防止溢出
 		    if (factor > 1.0f) factor = 1.0f;
-
-		    // 重新缩放矢量
 		    fx = (fx / magnitude) * factor;
 		    fy = (fy / magnitude) * factor;
 		}
 
 		// Set axes
 		auto& report = joystickReport;
-		report.x = fx * 32767;
-		report.y = fy * 32767;
-		report.z = fz * 32767;
-		report.rx = dv0 / maxRange * 32767;
-		report.ry = dv1 / maxRange * 32767;
-		report.rz = dv2 / maxRange * 32767;
+		report.x = fx * axisRange;
+		report.y = fy * axisRange;
+		report.z = fz * axisRange;
+		report.rx = dv0 * scale;
+		report.ry = dv1 * scale;
+		report.rz = dv2 * scale;
 		report.lt = loopTime;
-		report._ = swv;//+swv1.update(report.y);//+swv2.update(dv2);
+		report.swv = swv;//+swv1.update(report.y);//+swv2.update(dv2);
 
 
 		static GPIOPin buttonPins[21] = {
@@ -230,6 +245,10 @@ extern "C" void RealMain(){
 		}
 		else{
 			HID_SendReport_Safe(&hUsbDeviceFS, (uint8_t*)&report, sizeof(report),0);
+		}
+		if(configNeedsSaving){
+			Persistence::Save(0, joystickConfig);
+			configNeedsSaving = false;
 		}
 	}
 }

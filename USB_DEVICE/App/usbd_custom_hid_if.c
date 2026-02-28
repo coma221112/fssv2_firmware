@@ -227,6 +227,7 @@ static int8_t CUSTOM_HID_OutEvent_FS(uint8_t event_idx, uint8_t state)
 	memcpy(&temp, hhid->Report_buf, sizeof(JoystickConfig_t));
 	if (temp.magic == 999){
 		joystickConfig=temp;
+		configNeedsSaving = 1;
 	}
 	else{
 		configNeedsSending = 1;
