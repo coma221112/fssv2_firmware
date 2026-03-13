@@ -22,7 +22,8 @@ typedef struct{
 	uint32_t maxRange;
     uint32_t calibLongPressMs;
     float deadzone;
-    uint8_t  padding[4];
+    uint8_t swvT;
+    uint8_t  padding[3];
 } __attribute__((packed)) JoystickConfig_t;
 
 #ifdef __cplusplus
@@ -48,7 +49,7 @@ typedef struct{
 
 
 #ifdef __cplusplus
-volatile inline JoystickConfig_t joystickConfig={999, 800000, 3000, 0};
+volatile inline JoystickConfig_t joystickConfig={999, 800000, 3000, 0, 100};
 #else
 extern volatile JoystickConfig_t joystickConfig;
 #endif

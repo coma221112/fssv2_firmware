@@ -123,7 +123,7 @@ extern "C" void RealMain(){
 			lastF = DWT_GetUs();
 			swvRaw = swv0.update(abs(v0-v1) + abs(v1-v2) + abs(v2-v0));
 			swv = swvRaw;//swvEma.update(swvRaw);
-			if(swv < 400000){
+			if(swv < joystickConfig.swvT * 1024){
 				dc0=zt0.update(v0);
 				dc1=zt1.update(v1);
 				dc2=zt2.update(v2);
@@ -163,7 +163,7 @@ extern "C" void RealMain(){
 		report.ry = dv1 * scale;
 		report.rz = dv2 * scale;
 		report.lt = loopTime;
-		report.swv = swv;//+swv1.update(report.y);//+swv2.update(dv2);
+		report.swv = swv/1024;//+swv1.update(report.y);//+swv2.update(dv2);
 
 
 		static GPIOPin buttonPins[21] = {
@@ -244,7 +244,12 @@ extern "C" void RealMain(){
 		    }
 		}
 		else{
-			HID_SendReport_Safe(&hUsbDeviceFS, (uint8_t*)&report, sizeof(report),0);
+//			static uint32_t last_usb_tick = 0;
+//			uint32_t current_tick = HAL_GetTick();
+//			if (current_tick - last_usb_tick >= 4) {
+				HID_SendReport_Safe(&hUsbDeviceFS, (uint8_t*)&report, sizeof(report),0);
+//				last_usb_tick = current_tick;
+//			}
 		}
 		if(configNeedsSaving){
 			Persistence::Save(0, joystickConfig);

@@ -19,7 +19,7 @@ public:
     GPIOPin SCK;
 
     DEMA ema = DEMA(20);
-    SMA<13> sma = SMA<13>();
+    SMA<26> sma = SMA<26>();
     volatile uint16_t ISRTime = 0;
     volatile int32_t ADCdata = 0;
     volatile int32_t filtered = 0;
