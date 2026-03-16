@@ -123,7 +123,7 @@ extern "C" void RealMain(){
 			lastF = DWT_GetUs();
 			swvRaw = swv0.update(abs(v0-v1) + abs(v1-v2) + abs(v2-v0));
 			swv = swvRaw;//swvEma.update(swvRaw);
-			if(swv < joystickConfig.swvT * 1024){
+			if(swv < joystickConfig.swvT * 8192){
 				dc0=zt0.update(v0);
 				dc1=zt1.update(v1);
 				dc2=zt2.update(v2);
@@ -163,7 +163,7 @@ extern "C" void RealMain(){
 		report.ry = dv1 * scale;
 		report.rz = dv2 * scale;
 		report.lt = loopTime;
-		report.swv = swv/1024;//+swv1.update(report.y);//+swv2.update(dv2);
+		report.swv = swv/8192;//+swv1.update(report.y);//+swv2.update(dv2);
 
 
 		static GPIOPin buttonPins[21] = {

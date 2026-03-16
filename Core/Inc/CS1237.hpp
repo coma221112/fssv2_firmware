@@ -19,7 +19,8 @@ public:
     GPIOPin SCK;
 
     DEMA ema = DEMA(20);
-    SMA<26> sma = SMA<26>();
+    SMA<3> sma = SMA<3>();
+    FastNotch notch50 = FastNotch(1280, 50, 1);
     volatile uint16_t ISRTime = 0;
     volatile int32_t ADCdata = 0;
     volatile int32_t filtered = 0;
@@ -47,8 +48,8 @@ public:
 
 		ADCdata = ADCreadImmediately();
 		syncConfig();
-//		filtered = ADCdata;
-		filtered = sma.update(ADCdata);
+		filtered = notch50.update(ADCdata);
+		filtered = sma.update(filtered);
 
 		uint32_t pinMask = DOUT.pin_;
 		__HAL_GPIO_EXTI_CLEAR_IT(pinMask);
