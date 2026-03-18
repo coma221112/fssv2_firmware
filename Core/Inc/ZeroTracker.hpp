@@ -16,7 +16,7 @@ class ZeroTracker {
 public:
     ZeroTracker(int32_t initialZero = 0)
         : zero(initialZero), deadzone(2400000), fastzone(10000), slowzone(2400000)
-        , slowRate(10), fastRate(10){}
+        , slowRate(1), fastRate(1){}
 
     void setDeadzone(int32_t threshold) { deadzone = threshold; }
     void setFastzone(int32_t threshold) { fastzone = threshold; }

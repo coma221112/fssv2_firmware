@@ -119,7 +119,9 @@ extern "C" void RealMain(){
 		dv1=v1-dc1;
 		dv2=v2-dc2;
 
-		if(DWT_GetUs() - lastF > 10000){
+		dv2=dv2*1.0206;
+		dv1=dv1*0.9512;
+		if(DWT_GetUs() - lastF > 1000){
 			lastF = DWT_GetUs();
 			swvRaw = swv0.update(abs(v0-v1) + abs(v1-v2) + abs(v2-v0));
 			swv = swvRaw;//swvEma.update(swvRaw);
